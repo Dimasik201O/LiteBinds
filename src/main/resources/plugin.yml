@@ -1,0 +1,6 @@
+name: LiteBinds
+version: '${project.version}'
+main: org.dimasik.litebinds.LiteBinds
+api-version: '1.16'
+commands:
+  binds:
