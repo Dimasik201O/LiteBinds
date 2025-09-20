@@ -14,9 +14,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerSwapHandItemsEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
@@ -25,17 +23,35 @@ import org.dimasik.litebinds.database.ActionType;
 import org.dimasik.litebinds.database.DatabaseManager;
 import org.dimasik.litebinds.database.PlayerActions;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 public class EventListener implements Listener {
+    private final Map<UUID, ItemStack> lastHeldItems = new HashMap<>();
+
+    public EventListener(){
+        Bukkit.getScheduler().runTaskTimer(LiteBinds.getInstance(), () -> {
+            for(Player player : Bukkit.getOnlinePlayers()){
+                ItemStack newItem = player.getInventory().getItemInHand();
+                Bukkit.getScheduler().runTaskLater(LiteBinds.getInstance(), () -> {
+                    lastHeldItems.put(player.getUniqueId(), newItem.clone());
+                }, 1);
+            }
+        }, 0, 1);
+    }
+
     @EventHandler
-    public void on(PlayerDropItemEvent event){
+    public void on(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
-        if(event.getItemDrop().getItemStack().getType() == Material.NETHERITE_SWORD){
+        ItemStack droppedItem = event.getItemDrop().getItemStack();
+        ItemStack lastHeldItem = lastHeldItems.get(player.getUniqueId());
+
+        if (lastHeldItem != null && lastHeldItem.isSimilar(droppedItem) && droppedItem.getType() == Material.NETHERITE_SWORD) {
             try {
                 Optional<PlayerActions> playerActionsOptional = LiteBinds.getInstance().getDatabaseManager().getPlayerActions(player.getName()).get();
-                PlayerActions playerActions;
-                playerActions = playerActionsOptional.orElseGet(() -> new PlayerActions(
+                PlayerActions playerActions = playerActionsOptional.orElseGet(() -> new PlayerActions(
                         player.getName(),
                         ActionType.NONE,
                         ActionType.NONE,
